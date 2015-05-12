@@ -78,18 +78,19 @@ trait ResourceService extends JsonFormats {
                 case Left(errorMessage) => BadRequest -> errorMessage
               }
             } } ~
-              pathPrefix("votes") {
-                (post & entity(as[Vote])) { vote =>
-                  complete {
-                    (votingsManager ? VotingVote(votingId, vote.userId )).mapTo[VoteDone].map(Right[String, VoteDone](_))
-                      .recover { case ex => Left(ex.getMessage) }
-                      .map[ToResponseMarshallable] {
-                      case Right(votingCreated) => votingCreated
-                      case Left(errorMessage) => BadRequest -> errorMessage
-                    }
+              (post & entity(as[Vote])) { vote =>
+                complete {
+                  (votingsManager ? VotingVote(votingId, vote.userId )).mapTo[VoteDone].map(Right[String, VoteDone](_))
+                    .recover { case ex => Left(ex.getMessage) }
+                    .map[ToResponseMarshallable] {
+                    case Right(votingCreated) => votingCreated
+                    case Left(errorMessage) => BadRequest -> errorMessage
                   }
                 }
               }
+//              pathPrefix("votes") {
+//
+//              }
           }
       }
     }
