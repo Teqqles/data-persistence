@@ -15,15 +15,15 @@ class VotingServiceSpec extends FlatSpec with Matchers with ScalatestRouteTest w
   override implicit val votingsManager: ActorRef = system.actorOf(Props(classOf[VotingsManager]))
 
   it should "create a new voting" in {
-    Post(s"/votings", CreateVoting("", "", 1)) ~> routes ~> check {
+    Post(s"/votings", CreateVoting("thingAId", "thingBId", 2)) ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VotingCreated] shouldBe VotingCreated("")
+      responseAs[VotingCreated] shouldBe a [VotingCreated]
     }
   }
 
   it should "get a voting result" in {
-    Get(s"/votings/a") ~> routes ~> check {
+    Get(s"/votings/voteid1") ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
       responseAs[VotingResult] shouldBe VotingResult(None, 10, true)
@@ -31,10 +31,10 @@ class VotingServiceSpec extends FlatSpec with Matchers with ScalatestRouteTest w
   }
 
   it should "post a vote" in {
-    Post(s"/votings/a", Vote("")) ~> routes ~> check {
+    Post(s"/votings/voteid1", Vote("")) ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VoteDone] shouldBe VoteDone("a", "")
+      responseAs[VoteDone] shouldBe VoteDone("voteid1", "")
     }
   }
 

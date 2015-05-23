@@ -2,13 +2,17 @@ package pt.akka.workshop
 
 import akka.actor.Actor
 
+
+/*
+
+
+ */
+
 object VotingsManager {
   case class CreateVoting(thingAId:String, thingBId:String, maxVotes:Int)
   case class VotingCreated(votingId:String)
 
-
-  case class VotingVote(votingId:String, userId:String)
-  case class Vote(userId:String)
+  case class Vote(votingId:String, userId:String)
   case class VoteDone(votingId:String, userId:String)
 
   case class GetResult(votingId:String)
@@ -20,12 +24,12 @@ class VotingsManager extends Actor {
 
   override def receive: Receive = {
     case CreateVoting(thing1Id, thing2Id, maxVotes) =>
-      sender() ! VotingCreated("")
+      sender() ! VotingCreated("not implemented")
 
-    case VotingVote(votingId, userId) =>
+    case Vote(votingId, userId) =>
       sender() ! VoteDone(votingId, userId)
 
     case GetResult(votingId) =>
-      sender() ! VotingResult(None, 10, true)
+      sender() ! VotingResult(Some("not implemented"), 10, true)
   }
 }

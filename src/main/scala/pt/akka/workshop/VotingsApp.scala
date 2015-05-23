@@ -17,6 +17,7 @@ import akka.util.Timeout
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import java.io.IOException
+import pt.akka.workshop.ResourceService.UserVote
 import pt.akka.workshop.VotingsManager._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -30,13 +31,15 @@ trait JsonFormats extends DefaultJsonProtocol {
   implicit val votingCreatedFormat = jsonFormat1(VotingCreated.apply)
   implicit val votingResultFormat = jsonFormat3(VotingResult.apply)
 
-  implicit val votingVoteFormat = jsonFormat2(VotingVote.apply)
+  implicit val votingVoteFormat = jsonFormat2(Vote.apply)
 
-  implicit val voteFormat = jsonFormat1(Vote.apply)
+  implicit val voteFormat = jsonFormat1(UserVote.apply)
   implicit val voteDoneFormat = jsonFormat2(VoteDone.apply)
 
 }
-
+object ResourceService {
+  case class UserVote(userId:String)
+}
 trait ResourceService extends JsonFormats {
   import scala.concurrent.duration._
 
@@ -53,44 +56,38 @@ trait ResourceService extends JsonFormats {
 
   import akka.pattern._
   implicit val timeout = Timeout(5.seconds)
+
+
+  def toResponse[T ](future:Future[T])(implicit conv: T=>ToResponseMarshallable): Future[ToResponseMarshallable] = {
+    future.map(Right[String, T](_))
+      .recover { case ex => Left(ex.getMessage) }
+      .map[ToResponseMarshallable] {
+        case Right(votingCreated) => conv(votingCreated)
+        case Left(errorMessage) => BadRequest -> errorMessage
+    }
+  }
+
   val routes = {
     logRequestResult("akka-workshop-persistence") {
       pathPrefix("votings") {
         pathEnd {
             (post & entity(as[CreateVoting])) { createVoting =>
               complete {
-                (votingsManager ? createVoting).mapTo[VotingCreated].map(Right[String, VotingCreated](_))
-                  .recover { case ex => Left(ex.getMessage) }
-                  .map[ToResponseMarshallable] {
-                  case Right(votingCreated) => votingCreated
-                  case Left(errorMessage) => BadRequest -> errorMessage
-                }
+                toResponse((votingsManager ? createVoting).mapTo[VotingCreated])
               }
             }
         } ~
           path(Segment) { votingId =>
             get {
               complete {
-              (votingsManager ? GetResult(votingId)).mapTo[VotingResult].map(Right[String, VotingResult](_))
-                .recover { case ex => Left(ex.getMessage) }
-                .map[ToResponseMarshallable] {
-                case Right(votingResult) => votingResult
-                case Left(errorMessage) => BadRequest -> errorMessage
+                toResponse((votingsManager ? GetResult(votingId)).mapTo[VotingResult])
               }
-            } } ~
-              (post & entity(as[Vote])) { vote =>
+            } ~
+              (post & entity(as[UserVote])) { vote =>
                 complete {
-                  (votingsManager ? VotingVote(votingId, vote.userId )).mapTo[VoteDone].map(Right[String, VoteDone](_))
-                    .recover { case ex => Left(ex.getMessage) }
-                    .map[ToResponseMarshallable] {
-                    case Right(votingCreated) => votingCreated
-                    case Left(errorMessage) => BadRequest -> errorMessage
-                  }
+                  toResponse((votingsManager ? Vote(votingId, vote.userId )).mapTo[VoteDone])
                 }
               }
-//              pathPrefix("votes") {
-//
-//              }
           }
       }
     }
