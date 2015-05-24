@@ -26,15 +26,15 @@ class VotingServiceSpec extends FlatSpec with Matchers with ScalatestRouteTest w
     Get(s"/votings/voteid1") ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VotingResult] shouldBe VotingResult(None, 10, true)
+      responseAs[VotingResult] shouldBe VotingResult(Some("not implemented"), 10, true)
     }
   }
 
   it should "post a vote" in {
-    Post(s"/votings/voteid1", Vote("")) ~> routes ~> check {
+    Post(s"/votings/voteid1", Vote("", "", "")) ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VoteDone] shouldBe VoteDone("voteid1", "")
+      responseAs[VoteDone] shouldBe VoteDone(0)
     }
   }
 

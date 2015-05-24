@@ -31,14 +31,14 @@ trait JsonFormats extends DefaultJsonProtocol {
   implicit val votingCreatedFormat = jsonFormat1(VotingCreated.apply)
   implicit val votingResultFormat = jsonFormat3(VotingResult.apply)
 
-  implicit val votingVoteFormat = jsonFormat2(Vote.apply)
+  implicit val voteFormat = jsonFormat3(Vote.apply)
 
-  implicit val voteFormat = jsonFormat1(UserVote.apply)
-  implicit val voteDoneFormat = jsonFormat2(VoteDone.apply)
+  implicit val userVoteFormat = jsonFormat2(UserVote.apply)
+  implicit val voteDoneFormat = jsonFormat1(VoteDone.apply)
 
 }
 object ResourceService {
-  case class UserVote(userId:String)
+  case class UserVote(itemId:String, userId:String)
 }
 trait ResourceService extends JsonFormats {
   import scala.concurrent.duration._
@@ -85,7 +85,7 @@ trait ResourceService extends JsonFormats {
             } ~
               (post & entity(as[UserVote])) { vote =>
                 complete {
-                  toResponse((votingsManager ? Vote(votingId, vote.userId )).mapTo[VoteDone])
+                  toResponse((votingsManager ? Vote(votingId, vote.itemId, vote.userId )).mapTo[VoteDone])
                 }
               }
           }
