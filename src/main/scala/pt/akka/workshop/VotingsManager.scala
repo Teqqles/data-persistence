@@ -11,6 +11,11 @@ import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
   The voting ends when one of the items reaches max number of votes that was specified on voting's creation.
   It should be possible to retrieve results for all present and past votings.
 
+  The API is:
+  POST /votings - where body is a json with fields: "itemAId":string, "itemBId":string, "maxVotes":int
+  POST /votings/<votingid> - where body is a json with fields: "votingId":string, "itemId":string, "userId":string
+  GEt  /votings returns json with "winningItemId":string (optional), "votes":int, "finished":boolean
+
                        ----------------------------
                        |   Voting                 |
   0   User1            |                          |
@@ -20,6 +25,8 @@ import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
          Item A -->    |     V: 4      V: 3       |
                        |                          |
                        ----------------------------
+Goals:
+
    Path 1 (mandatory):
    - creating votings, gathering votes and returning results
    - basic error handling (voting or item does not exist, vote for a finished voting, duplicate item in a voting)
@@ -34,6 +41,8 @@ import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
    Path 3 (harder):
    - a child actor is spawned to manage the state of each voting that is in progress - with its persistence.
    - to handle increased load, the VotingsManager actor needs to be partitioned
+
+
  */
 
 object VotingsManager {
