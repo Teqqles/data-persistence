@@ -41,7 +41,7 @@ Goals:
    Path 3 (harder):
    - a child actor is spawned to manage the state of each voting that is in progress - with its persistence.
    - to handle increased load, the VotingsManager actor needs to be partitioned
-
+   - use persistAsync instead of persist and deal with the consequences;)
 
  */
 
