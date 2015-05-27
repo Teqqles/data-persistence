@@ -1,6 +1,7 @@
 package pt.akka.workshop
 
-import akka.actor.Actor
+import akka.actor.{ActorLogging, Actor}
+import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
 
 
 /*
@@ -59,17 +60,35 @@ object VotingsManager {
   case class VotingResult(winningItemId:Option[String], votes:Int, finished:Boolean)
 }
 
-class VotingsManager extends Actor {
+class VotingsManager extends PersistentActor with ActorLogging {
   import VotingsManager._
 
-  override def receive: Receive = {
+  override def receiveCommand: Receive = {
     case CreateVoting(itemAId, itemBId, maxVotes) =>
-      sender() ! VotingCreated("not implemented")
-
+      val replyTo = sender()
+      val created = VotingCreated("not implemented")
+      persist(created) { created =>
+        // not implemented
+        replyTo ! created
+        log.debug("Created a new voting with id: " + 0)
+      }
     case Vote(votingId, itemId, userId) =>
       sender() ! VoteDone(0) // not implemented
 
     case GetResult(votingId) =>
       sender() ! VotingResult(Some("not implemented"), 10, true)
   }
+
+  def receiveRecover = {
+    case VotingCreated(votingId) =>
+      log.debug(s"recovering VotingCreated: " + votingId)
+    case SnapshotOffer(_, snapshot: Any) =>
+      log.debug(s"Integrating snapshot: " + snapshot)
+    case RecoveryCompleted =>
+      log.info(s"Recovery of VotingsManager completed.")
+    case e =>
+      log.error(s"Received unknown event: "+e)
+  }
+
+  def persistenceId: String = "VotingsManager"
 }
