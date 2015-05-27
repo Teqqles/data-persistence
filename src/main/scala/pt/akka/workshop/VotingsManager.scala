@@ -5,6 +5,11 @@ import akka.actor.Actor
 
 /*
 
+  So, our task is to implement a service actor for a votings management API.
+  A voting is two items competing against each other for the votes of users.
+  The voting ends when one of the items reaches max number of votes that was specified on voting's creation.
+  It should be possible to retrieve results for all present and past votings.
+
                        ----------------------------
                        |   Voting                 |
   0   User1            |                          |
@@ -14,15 +19,20 @@ import akka.actor.Actor
          Item A -->    |     V: 4      V: 3       |
                        |                          |
                        ----------------------------
-   Phase 1:
-   - creating votings, sending votes and getting results
+   Path 1 (mandatory):
+   - creating votings, gathering votes and returning results
    - basic error handling (voting or item does not exist, vote for a finished voting, duplicate item in a voting)
+   - all information that is needed to conform to the API must be preserved between application restarts.
+     (hence akka-persistence)
 
-   Phase 2:
-   - it should be illegal to create two votings with two the same items
-   - it should be illegal for a user to vote more than once in a single voting
+   Path 2:
+   - it is illegal to create two votings with two the same items
+   - it is illegal for a user to vote more than once in a single voting
+   - state snapshots are used to allow for faster recovery
 
-   Phase 3:
+   Path 3 (harder):
+   - a child actor is spawned to manage the state of each voting that is in progress - with its persistence.
+   - to handle increased load, the VotingsManager actor needs to be partitioned
  */
 
 object VotingsManager {
@@ -42,6 +52,7 @@ object VotingsManager {
   /**
    *
    * @param winningItemId id of the winning item or None, if it is a draw
+   *                      (a draw is only possible if max number of votes is not reached yet).
    * @param votes number of votes of the winning item or votes in a draw
    * @param finished is the voting finished? (was max number of votes reached)
    */
