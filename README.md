@@ -24,9 +24,9 @@ The API is:
 Goals:
 
 ##  Path 1 (mandatory):
-- creating votings, gathering votes and returning results
+- ~~creating votings~~, gathering votes and ~~returning results~~
 - basic error handling (voting or item does not exist, vote for a finished voting, duplicate item in a voting)
-- all information that is needed to conform to the API must be preserved between application restarts. (hence akka-persistence)
+- ~~all information that is needed to conform to the API must be preserved between application restarts. (hence akka-persistence)~~
 
 ###  Path 2:
 - it is illegal to create two votings with two the same items
