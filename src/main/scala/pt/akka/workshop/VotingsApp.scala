@@ -31,7 +31,7 @@ trait JsonFormats extends DefaultJsonProtocol {
   implicit val votingCreatedFormat = jsonFormat1(VotingCreated.apply)
   implicit val votingResultFormat = jsonFormat3(VotingResult.apply)
 
-  implicit val voteFormat = jsonFormat3(Vote.apply)
+  implicit val voteFormat = jsonFormat2(Vote.apply)
 
   implicit val userVoteFormat = jsonFormat2(UserVote.apply)
   implicit val voteDoneFormat = jsonFormat1(VoteDone.apply)
@@ -85,7 +85,7 @@ trait ResourceService extends JsonFormats {
             } ~
               (post & entity(as[UserVote])) { vote =>
                 complete {
-                  toResponse((votingsManager ? Vote(votingId, vote.itemId, vote.userId )).mapTo[VoteDone])
+                  toResponse((votingsManager ? VoteWithId(votingId, vote.itemId, vote.userId )).mapTo[VoteDone])
                 }
               }
           }

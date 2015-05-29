@@ -2,6 +2,9 @@ package pt.akka.workshop
 
 import akka.actor.{ActorLogging, Actor}
 import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
+import pt.akka.workshop.VotingsManager.Vote
+
+import scala.concurrent.Future
 
 
 /*
@@ -13,7 +16,7 @@ import akka.persistence.{RecoveryCompleted, SnapshotOffer, PersistentActor}
 
   The API is:
   POST /votings - where body is a json with fields: "itemAId":string, "itemBId":string, "maxVotes":int
-  POST /votings/<votingid> - where body is a json with fields: "votingId":string, "itemId":string, "userId":string
+  POST /votings/<votingid> - where body is a json with fields: "itemId":string, "userId":string
   GEt  /votings returns json with "winningItemId":string (optional), "votes":int, "finished":boolean
 
                        ----------------------------
@@ -47,9 +50,11 @@ Goals:
 
 object VotingsManager {
   case class CreateVoting(itemAId:String, itemBId:String, maxVotes:Int)
+  case class DeleteVoting(votingId:String)
   case class VotingCreated(votingId:String)
 
-  case class Vote(votingId:String, itemId:String, userId:String)
+  case class Vote(itemId:String, userId:String)
+  case class VoteWithId(voteId:String, itemId:String, userId:String)
 
   /**
    * Confirmation of the vote
@@ -67,37 +72,77 @@ object VotingsManager {
    * @param finished is the voting finished? (was max number of votes reached)
    */
   case class VotingResult(winningItemId:Option[String], votes:Int, finished:Boolean)
+
+  case class VotingList(voteId:String, maxVotes:Int, pollVotes:List[Option[Vote]])
+
+  case class VotingStatus(pollList:List[VotingList] = List.empty) {
+      def getPoll(pollId:String): Option[VotingList] = {
+          pollList.find( _.voteId == pollId )
+      }
+      def getOtherPolls(pollId:String): List[VotingList] = {
+          pollList.filter( _.voteId != pollId )
+      }
+  }
 }
+
+
 
 class VotingsManager extends PersistentActor with ActorLogging {
   import VotingsManager._
 
+  var votingList:VotingStatus = VotingStatus()
+
+  def getVotes( list: Option[VotingList] ):Int = {
+      (for{
+          item <- list
+          vote = item.pollVotes
+      } yield vote.foldLeft(0)((b,a) => b+1)).getOrElse(0)
+  }
+
+  def isVotingFinished( list: Option[VotingList] ):Boolean = {
+      list match {
+          case None => false
+          case _ => list.get.maxVotes <= getVotes( list )
+      }
+  }
+
   override def receiveCommand: Receive = {
     case CreateVoting(itemAId, itemBId, maxVotes) =>
       val replyTo = sender()
-      val created = VotingCreated("not implemented")
-      persist(created) { created =>
-        // not implemented
-        replyTo ! created
-        log.debug("Created a new voting with id: " + 0)
+      val voteId = itemAId + "|" + itemBId
+      val created = VotingStatus( List( VotingList(voteId,maxVotes,Nil) ) )
+
+      persist(created) { list =>
+        votingList = votingList.copy( votingList.pollList ++ list.pollList )
+        replyTo ! VotingCreated(voteId)
+        log.info("Created a new voting with id: " + voteId)
       }
-    case Vote(votingId, itemId, userId) =>
-      sender() ! VoteDone(0) // not implemented
+    case VoteWithId(votingId, itemId, userId) =>
+        sender() ! VoteDone(0)
 
     case GetResult(votingId) =>
-      sender() ! VotingResult(Some("not implemented"), 10, true)
+      val list = votingList.getPoll(votingId)
+      if ( list.isEmpty ) {
+          sender() ! "No such list exists"
+      }
+      sender() ! VotingResult(None, getVotes(list), isVotingFinished(list))
   }
 
   def receiveRecover = {
+    case VotingStatus( List( VotingList(voteId, maxVotes, Nil) ) ) =>
+      log.info(s"recovering VotingStatus: " + voteId)
+      votingList = votingList.copy( votingList.pollList ++ List( VotingList( voteId, maxVotes, Nil )))
     case VotingCreated(votingId) =>
-      log.debug(s"recovering VotingCreated: " + votingId)
+      log.info(s"recovering VotingCreated: " + votingId)
     case SnapshotOffer(_, snapshot: Any) =>
-      log.debug(s"Integrating snapshot: " + snapshot)
+      log.info(s"Integrating snapshot: " + snapshot)
     case RecoveryCompleted =>
       log.info(s"Recovery of VotingsManager completed.")
     case e =>
       log.error(s"Received unknown event: "+e)
   }
+
+  def deleteMessagesTo(persistenceId: String, toSequenceNr: Long, permanent: Boolean): Unit = { }
 
   def persistenceId: String = "VotingsManager"
 }

@@ -19,22 +19,34 @@ class VotingServiceSpec extends FlatSpec with Matchers with ScalatestRouteTest w
       status shouldBe OK
       contentType shouldBe `application/json`
       responseAs[VotingCreated] shouldBe a [VotingCreated]
+      responseAs[VotingCreated] shouldBe VotingCreated("thingAId|thingBId")
     }
   }
 
-  it should "get a voting result" in {
-    Get(s"/votings/voteid1") ~> routes ~> check {
+  it should "get an empty voting result when no results have been counted" in {
+    Get(s"/votings/thingAId|thingBId") ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VotingResult] shouldBe VotingResult(Some("not implemented"), 10, true)
+      responseAs[VotingResult] shouldBe VotingResult(None, 0, false)
+    }
+  }
+
+  it should "throw an error if a voting does not exist when requested" in {
+    Get(s"/votings/notAThing") ~> routes ~> check {
+      status shouldBe BadRequest
     }
   }
 
   it should "post a vote" in {
-    Post(s"/votings/voteid1", Vote("", "", "")) ~> routes ~> check {
+    Post(s"/votings/thingAId|thingBId", Vote("thingAId", "davidLong")) ~> routes ~> check {
       status shouldBe OK
       contentType shouldBe `application/json`
-      responseAs[VoteDone] shouldBe VoteDone(0)
+      responseAs[VoteDone] shouldBe VoteDone(1)
+    }
+    Post(s"/votings/thingAId|thingBId", Vote("thingAId", "avaLong")) ~> routes ~> check {
+      status shouldBe OK
+      contentType shouldBe `application/json`
+      responseAs[VoteDone] shouldBe VoteDone(2)
     }
   }
 
